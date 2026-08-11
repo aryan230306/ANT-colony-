@@ -15,9 +15,15 @@
         <p class="subtitle">Ant Colony Optimisation</p>
         
         <div class="ppt-viewer" id="viewer-container">
-            <canvas id="pdf-render"></canvas>
+            <!-- Loading Spinner -->
+            <div id="pdf-loader" class="pdf-loader">
+                <div class="spinner"></div>
+                <p>Loading Presentation <span id="pdf-progress">0%</span></p>
+            </div>
+
+            <canvas id="pdf-render" style="display: none;"></canvas>
             
-            <div class="ppt-controls">
+            <div class="ppt-controls" id="pdf-controls" style="display: none;">
                 <button class="ppt-btn" id="prev-page">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 </button>
@@ -46,8 +52,8 @@
             pageNumIsPending = null;
 
         const scale = 1.5,
-            canvas = document.querySelector('#pdf-render'),
-            ctx = canvas.getContext('2d');
+              canvas = document.querySelector('#pdf-render'),
+              ctx = canvas.getContext('2d');
 
         // Render the page
         const renderPage = num => {
@@ -55,7 +61,6 @@
 
             // Get page
             pdfDoc.getPage(num).then(page => {
-                // Set scale
                 const viewport = page.getViewport({ scale });
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
@@ -102,9 +107,23 @@
             queueRenderPage(pageNum);
         };
 
-        // Get Document
-        pdfjsLib.getDocument(url).promise.then(pdfDoc_ => {
+        // Get Document with Progress
+        const loadingTask = pdfjsLib.getDocument(url);
+        
+        loadingTask.onProgress = function (progress) {
+            if (progress.total > 0) {
+                let percent = Math.round((progress.loaded / progress.total) * 100);
+                document.getElementById('pdf-progress').textContent = percent + '%';
+            }
+        };
+
+        loadingTask.promise.then(pdfDoc_ => {
             pdfDoc = pdfDoc_;
+            // Hide loader and show canvas/controls
+            document.getElementById('pdf-loader').style.display = 'none';
+            canvas.style.display = 'block';
+            document.getElementById('pdf-controls').style.display = 'flex';
+            
             document.querySelector('#page-count').textContent = pdfDoc.numPages;
             renderPage(pageNum);
         });
