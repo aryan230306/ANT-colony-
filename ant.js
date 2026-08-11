@@ -14,9 +14,6 @@ class Ant {
         // Animation
         this.legPhase = Math.random() * Math.PI * 2;
         
-        // State for bouncing off obstacles
-        this.frustration = 0;
-
         // Unique color variation
         this.bodyHue = 15 + Math.random() * 10;
         this.bodyLight = 12 + Math.random() * 8;
@@ -108,13 +105,6 @@ class Ant {
                     targetY = sim.foodSources[0].y;
                 }
 
-                // If frustrated, temporarily reverse the target to force exploration away from blockages!
-                if (this.frustration > 0) {
-                    this.frustration--;
-                    targetX = this.x - (targetX - this.x);
-                    targetY = this.y - (targetY - this.y);
-                }
-
                 let angleToTarget = Math.atan2(targetY - this.y, targetX - this.x);
 
                 // Find the road direction closest to the target direction
@@ -169,39 +159,21 @@ class Ant {
             sim.isObstacle(nx, ny + margin) || 
             sim.isObstacle(nx, ny - margin)) {
             
-            // PUSH BACKWARDS out of the rock to prevent getting permanently stuck inside the margin
-            this.x -= Math.cos(this.angle) * this.speed * 2;
-            this.y -= Math.sin(this.angle) * this.speed * 2;
-
-            // Aggressively repel: force the ant to choose a clear road direction immediately
+            // Try to find nearest road direction
             if (roadDirs.length > 0) {
-                // Filter out directions that are too close to the current angle (which lead to the rock)
-                let validDirs = roadDirs.filter(d => {
-                    let diff = Math.abs(d - this.angle);
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    return Math.abs(diff) > Math.PI / 4; // Must turn at least 45 degrees
-                });
-                if (validDirs.length === 0) validDirs = roadDirs;
-                this.angle = validDirs[Math.floor(Math.random() * validDirs.length)];
+                this.angle = roadDirs[Math.floor(Math.random() * roadDirs.length)];
             } else {
                 this.angle += Math.PI + (Math.random() - 0.5); // Reverse if completely stuck
             }
-            this.frustration = 500; // Frustrate the ant for 500 frames so it actively pathfinds in reverse
             // We do NOT update this.x and this.y, so the ant stays outside the obstacle.
         } else {
             this.x = nx;
             this.y = ny;
         }
 
-        // Handle pheromones
-        if (this.frustration <= 0) {
-            // Normal deposit
-            const depositAmount = window.simDeposit || 50;
-            sim.addPheromone(writeGrid, this.x, this.y, depositAmount);
-        } else {
-            // Actively ERASE the bad trail to warn other ants!
-            sim.addPheromone(writeGrid, this.x, this.y, -100);
-        }
+        // Deposit pheromones
+        const depositAmount = window.simDeposit || 50;
+        sim.addPheromone(writeGrid, this.x, this.y, depositAmount);
 
         // Check food arrival
         if (!this.hasFood) {
