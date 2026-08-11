@@ -1,0 +1,297 @@
+class Ant {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.angle = Math.random() * Math.PI * 2;
+        this.speed = window.simSpeed || 1.5;
+        this.hasFood = false;
+        this.isResting = false;
+
+        // Sensory parameters
+        this.sensorAngle = Math.PI / 4;
+        this.sensorDist = 24;
+
+        // Animation
+        this.legPhase = Math.random() * Math.PI * 2;
+        
+        // State for bouncing off obstacles
+        this.frustration = 0;
+
+        // Unique color variation
+        this.bodyHue = 15 + Math.random() * 10;
+        this.bodyLight = 12 + Math.random() * 8;
+    }
+
+    sense(sim, grid, targetAngle) {
+        const sx = this.x + Math.cos(targetAngle) * this.sensorDist;
+        const sy = this.y + Math.sin(targetAngle) * this.sensorDist;
+        return sim.getPheromone(grid, sx, sy);
+    }
+
+    // Find walkable directions (road-aware)
+    findRoadDirections(sim) {
+        const dirs = [];
+        const step = 12; // Look further ahead to avoid getting stuck
+        const margin = 5; // Keep a wider margin from obstacles
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+            const nx = this.x + Math.cos(a) * step;
+            const ny = this.y + Math.sin(a) * step;
+            const mx = this.x + Math.cos(a) * (step / 2); // Check midpoint too
+            const my = this.y + Math.sin(a) * (step / 2);
+
+            // Check the endpoint and midpoint, with margins
+            if (!sim.isObstacle(nx, ny) && 
+                !sim.isObstacle(nx + margin, ny) && 
+                !sim.isObstacle(nx - margin, ny) && 
+                !sim.isObstacle(nx, ny + margin) && 
+                !sim.isObstacle(nx, ny - margin) &&
+                !sim.isObstacle(mx, my)) {
+                dirs.push(a);
+            }
+        }
+        return dirs;
+    }
+
+    update(sim) {
+        if (this.isResting) return;
+
+        this.speed = window.simSpeed || 1.5;
+        const exploreWeight = window.simExplore || 0.2;
+        const turnSpeed = 0.3;
+
+        const readGrid = this.hasFood ? sim.homeGrid : sim.foodGrid;
+        const writeGrid = this.hasFood ? sim.foodGrid : sim.homeGrid;
+
+        // Get available road directions
+        const roadDirs = this.findRoadDirections(sim);
+
+        if (roadDirs.length === 0) {
+            // Stuck! Try random angles to escape
+            this.angle += Math.PI / 2;
+        } else {
+            // Sense pheromones along available road directions
+            let bestAngle = this.angle;
+            let bestWeight = -1;
+
+            // Check current direction first (prefer continuing straight)
+            const wCenter = this.sense(sim, readGrid, this.angle);
+            const wLeft = this.sense(sim, readGrid, this.angle - this.sensorAngle);
+            const wRight = this.sense(sim, readGrid, this.angle + this.sensorAngle);
+            let totalWeight = wCenter + wLeft + wRight;
+
+            if (totalWeight > 0.001) {
+                // Follow pheromone trail
+                let pL = wLeft / totalWeight;
+                let pC = wCenter / totalWeight;
+                let pR = wRight / totalWeight;
+
+                pL = pL * (1 - exploreWeight) + (exploreWeight / 3);
+                pC = pC * (1 - exploreWeight) + (exploreWeight / 3);
+                pR = pR * (1 - exploreWeight) + (exploreWeight / 3);
+
+                let newTotal = pL + pC + pR;
+                pL /= newTotal; pC /= newTotal; pR /= newTotal;
+
+                let r = Math.random();
+                if (r < pL) {
+                    this.angle -= turnSpeed;
+                } else if (r >= pL + pC) {
+                    this.angle += turnSpeed;
+                }
+                // else keep straight
+            } else {
+                // No pheromone: navigate towards target
+                let targetX = sim.nest.x;
+                let targetY = sim.nest.y;
+                if (!this.hasFood && sim.foodSources.length > 0) {
+                    targetX = sim.foodSources[0].x;
+                    targetY = sim.foodSources[0].y;
+                }
+
+                // If frustrated, temporarily reverse the target to force exploration away from blockages!
+                if (this.frustration > 0) {
+                    this.frustration--;
+                    targetX = this.x - (targetX - this.x);
+                    targetY = this.y - (targetY - this.y);
+                }
+
+                let angleToTarget = Math.atan2(targetY - this.y, targetX - this.x);
+
+                // Find the road direction closest to the target direction
+                let bestDiff = Infinity;
+                for (let rd of roadDirs) {
+                    let diff = rd - angleToTarget;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    if (Math.abs(diff) < Math.abs(bestDiff)) {
+                        bestDiff = diff;
+                        bestAngle = rd;
+                    }
+                }
+
+                if (this.hasFood) {
+                    // Strong bias toward target road when returning
+                    this.angle = bestAngle + (Math.random() - 0.5) * 0.2;
+                } else {
+                    // Some exploration when searching
+                    if (Math.random() < 0.7) {
+                        this.angle = bestAngle + (Math.random() - 0.5) * 0.3;
+                    } else {
+                        // Random road direction for exploration
+                        this.angle = roadDirs[Math.floor(Math.random() * roadDirs.length)];
+                    }
+                }
+            }
+        }
+
+        // Tiny biological jitter
+        this.angle += (Math.random() - 0.5) * 0.05;
+
+        // Move
+        let nx = this.x + Math.cos(this.angle) * this.speed;
+        let ny = this.y + Math.sin(this.angle) * this.speed;
+
+        // World bounds
+        if (nx < 2 || nx >= sim.worldW - 2) {
+            this.angle = Math.PI - this.angle;
+            nx = Math.max(2, Math.min(nx, sim.worldW - 3));
+        }
+        if (ny < 2 || ny >= sim.worldH - 2) {
+            this.angle = -this.angle;
+            ny = Math.max(2, Math.min(ny, sim.worldH - 3));
+        }
+
+        // Check obstacle (building or rock) with a body margin
+        const margin = 4;
+        if (sim.isObstacle(nx, ny) || 
+            sim.isObstacle(nx + margin, ny) || 
+            sim.isObstacle(nx - margin, ny) || 
+            sim.isObstacle(nx, ny + margin) || 
+            sim.isObstacle(nx, ny - margin)) {
+            
+            // PUSH BACKWARDS out of the rock to prevent getting permanently stuck inside the margin
+            this.x -= Math.cos(this.angle) * this.speed * 2;
+            this.y -= Math.sin(this.angle) * this.speed * 2;
+
+            // Aggressively repel: force the ant to choose a clear road direction immediately
+            if (roadDirs.length > 0) {
+                // Filter out directions that are too close to the current angle (which lead to the rock)
+                let validDirs = roadDirs.filter(d => {
+                    let diff = Math.abs(d - this.angle);
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    return Math.abs(diff) > Math.PI / 4; // Must turn at least 45 degrees
+                });
+                if (validDirs.length === 0) validDirs = roadDirs;
+                this.angle = validDirs[Math.floor(Math.random() * validDirs.length)];
+            } else {
+                this.angle += Math.PI + (Math.random() - 0.5); // Reverse if completely stuck
+            }
+            this.frustration = 500; // Frustrate the ant for 500 frames so it actively pathfinds in reverse
+            // We do NOT update this.x and this.y, so the ant stays outside the obstacle.
+        } else {
+            this.x = nx;
+            this.y = ny;
+        }
+
+        // Handle pheromones
+        if (this.frustration <= 0) {
+            // Normal deposit
+            const depositAmount = window.simDeposit || 50;
+            sim.addPheromone(writeGrid, this.x, this.y, depositAmount);
+        } else {
+            // Actively ERASE the bad trail to warn other ants!
+            sim.addPheromone(writeGrid, this.x, this.y, -100);
+        }
+
+        // Check food arrival
+        if (!this.hasFood) {
+            for (let f of sim.foodSources) {
+                if (Math.hypot(this.x - f.x, this.y - f.y) < f.radius) {
+                    this.hasFood = true;
+                    this.angle += Math.PI;
+                    break;
+                }
+            }
+        } else {
+            // Check nest arrival
+            if (Math.hypot(this.x - sim.nest.x, this.y - sim.nest.y) < sim.nest.radius) {
+                this.hasFood = false;
+                this.isResting = true;
+                this.angle += Math.PI;
+            }
+        }
+
+        this.legPhase += this.speed * 0.5;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        // Ground shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(0, 1, 6, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const bodyColor = `hsl(${this.bodyHue}, 30%, ${this.bodyLight}%)`;
+        const legColor = `hsl(${this.bodyHue}, 25%, ${this.bodyLight + 5}%)`;
+
+        ctx.strokeStyle = legColor;
+        ctx.lineWidth = 1.0;
+        ctx.lineCap = 'round';
+
+        const lOff = Math.sin(this.legPhase) * 2;
+
+        // 6 legs with curves
+        ctx.beginPath();
+        ctx.moveTo(2.5, -1.5); ctx.quadraticCurveTo(5, -4 - lOff, 7, -7 - lOff); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(2.5, 1.5); ctx.quadraticCurveTo(5, 4 + lOff, 7, 7 + lOff); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, -1.8); ctx.quadraticCurveTo(1.5 + lOff, -5.5, 2.5 + lOff, -8.5); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, 1.8); ctx.quadraticCurveTo(1.5 - lOff, 5.5, 2.5 - lOff, 8.5); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-3.5, -1.5); ctx.quadraticCurveTo(-5 - lOff, -5, -7.5 - lOff, -7); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-3.5, 1.5); ctx.quadraticCurveTo(-5 + lOff, 5, -7.5 + lOff, 7); ctx.stroke();
+
+        // Body
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath(); ctx.ellipse(-4.5, 0, 4, 3, 0, 0, Math.PI * 2); ctx.fill(); // Abdomen
+        ctx.fillStyle = `hsl(${this.bodyHue}, 20%, ${this.bodyLight + 8}%)`;
+        ctx.beginPath(); ctx.ellipse(-5, -0.8, 1.8, 1.2, -0.3, 0, Math.PI * 2); ctx.fill(); // Sheen
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath(); ctx.ellipse(0, 0, 2.5, 2, 0, 0, Math.PI * 2); ctx.fill(); // Thorax
+        ctx.beginPath(); ctx.ellipse(3.5, 0, 2.5, 2, 0, 0, Math.PI * 2); ctx.fill(); // Head
+
+        // Eyes
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.arc(4.8, -1, 0.6, 0, Math.PI * 2);
+        ctx.arc(4.8, 1, 0.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Antennae
+        ctx.strokeStyle = legColor;
+        ctx.lineWidth = 0.7;
+        const aWave = Math.sin(this.legPhase * 0.7) * 1.2;
+        ctx.beginPath(); ctx.moveTo(5.5, -1.3); ctx.quadraticCurveTo(8, -2.5 + aWave, 9.5, -4 + aWave); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(5.5, 1.3); ctx.quadraticCurveTo(8, 2.5 - aWave, 9.5, 4 - aWave); ctx.stroke();
+
+        // Food crumb
+        if (this.hasFood) {
+            const cG = ctx.createRadialGradient(8, 0, 0.5, 8, 0, 2.5);
+            cG.addColorStop(0, '#ffd966');
+            cG.addColorStop(1, '#d4a017');
+            ctx.fillStyle = cG;
+            ctx.beginPath();
+            ctx.arc(8, 0, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+}
