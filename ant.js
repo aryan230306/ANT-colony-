@@ -68,12 +68,32 @@ class Ant {
         // Get available road directions
         const roadDirs = this.findRoadDirections(sim);
 
-        // If on cooldown from hitting an obstacle, just walk in current direction
+        // If on cooldown from hitting an obstacle, walk AWAY and prefer perpendicular turns
         if (this.cooldown > 0) {
             this.cooldown--;
-            // Only pick a random road dir if we have options, otherwise keep current angle
-            if (roadDirs.length > 0 && Math.random() < 0.3) {
-                this.angle = roadDirs[Math.floor(Math.random() * roadDirs.length)];
+            if (roadDirs.length > 0) {
+                // Filter out directions that go back toward the blocked angle
+                let safeDirs = roadDirs.filter(d => {
+                    let diff = d - this.blockedAngle;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    return Math.abs(diff) > Math.PI / 3; // Must be >60° away from blocked direction
+                });
+                if (safeDirs.length === 0) safeDirs = roadDirs;
+
+                // Prefer perpendicular directions (turns at intersections) over going straight back
+                let perpDirs = safeDirs.filter(d => {
+                    let diff = d - this.blockedAngle;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    return Math.abs(diff) > Math.PI / 2.5; // Roughly perpendicular
+                });
+
+                if (perpDirs.length > 0 && Math.random() < 0.8) {
+                    this.angle = perpDirs[Math.floor(Math.random() * perpDirs.length)];
+                } else {
+                    this.angle = safeDirs[Math.floor(Math.random() * safeDirs.length)];
+                }
             }
         } else if (roadDirs.length === 0) {
             // Stuck! Try random angles to escape
@@ -182,32 +202,16 @@ class Ant {
             sim.isObstacle(nx, ny + margin) || 
             sim.isObstacle(nx, ny - margin)) {
             
-            this.stuckCount++;
-
-            if (this.stuckCount > 3) {
-                // Been stuck too long — forcefully spin to a very different direction
-                this.angle += Math.PI * 0.75 + Math.random() * Math.PI * 0.5;
-                this.stuckCount = 0;
-                this.cooldown = 30; // Walk away for 30 frames before re-targeting
-            } else if (roadDirs.length > 0) {
-                // Pick a random clear road direction that is NOT toward the obstacle
-                let awayDirs = roadDirs.filter(d => {
-                    let diff = Math.abs(d - this.angle);
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    return Math.abs(diff) > Math.PI / 3;
-                });
-                if (awayDirs.length === 0) awayDirs = roadDirs;
-                this.angle = awayDirs[Math.floor(Math.random() * awayDirs.length)];
-                this.cooldown = 15; // Walk away for 15 frames
-            } else {
-                this.angle += Math.PI + (Math.random() - 0.5);
-                this.cooldown = 20;
-            }
-            // Do NOT update position — ant stays outside obstacle
+            // REVERSE immediately — go back the way you came
+            this.blockedAngle = this.angle; // Remember which direction was blocked
+            this.angle += Math.PI; // Complete 180° reversal
+            this.cooldown = 200; // Ignore food/pheromone targeting for 200 frames
+                                  // At speed 1.5, that's 300px — enough to walk back
+                                  // past an intersection and take a different road
+            // Do NOT update position
         } else {
             this.x = nx;
             this.y = ny;
-            if (this.stuckCount > 0) this.stuckCount--; // Gradually reduce stuck counter
         }
 
         // Deposit pheromones
