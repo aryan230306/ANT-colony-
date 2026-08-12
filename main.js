@@ -123,6 +123,18 @@ document.addEventListener('DOMContentLoaded', () => {
     btnReset.addEventListener('click', () => { sim.clear(); });
     btnClearObs.addEventListener('click', () => { sim.clearObstacles(); });
 
+    // Reset All: wipe everything and start fresh
+    document.getElementById('btnResetAll').addEventListener('click', () => {
+        sim.ants = [];
+        sim.foodSources = [];
+        sim.nest = null;
+        sim.clear();
+        sim.clearObstacles();
+        document.getElementById('antCount').textContent = '0';
+        isPaused = false;
+        btnPause.textContent = 'Pause';
+    });
+
     function hideUI() {
         uiPanel.classList.add('hidden');
         btnShowUI.classList.remove('hidden');
