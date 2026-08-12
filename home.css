@@ -437,3 +437,38 @@ h1 {
         padding: 3rem 2rem;
     }
 }
+
+.references-section {
+    padding: 0 2rem 4rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.references-list {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 2rem 3rem;
+    color: var(--text-muted);
+}
+
+.references-list ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.references-list li {
+    margin-bottom: 0.8rem;
+    word-break: break-all;
+}
+
+.references-list a {
+    color: #4da6ff;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.references-list a:hover {
+    color: var(--primary-pink);
+    text-decoration: underline;
+}
