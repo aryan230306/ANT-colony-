@@ -18,6 +18,7 @@ class Ant {
         this.stuckCount = 0;
         this.lastX = x;
         this.lastY = y;
+        this.cooldown = 0; // Frames to ignore target-seeking after hitting an obstacle
         
         // Unique color variation
         this.bodyHue = 15 + Math.random() * 10;
@@ -67,7 +68,14 @@ class Ant {
         // Get available road directions
         const roadDirs = this.findRoadDirections(sim);
 
-        if (roadDirs.length === 0) {
+        // If on cooldown from hitting an obstacle, just walk in current direction
+        if (this.cooldown > 0) {
+            this.cooldown--;
+            // Only pick a random road dir if we have options, otherwise keep current angle
+            if (roadDirs.length > 0 && Math.random() < 0.3) {
+                this.angle = roadDirs[Math.floor(Math.random() * roadDirs.length)];
+            }
+        } else if (roadDirs.length === 0) {
             // Stuck! Try random angles to escape
             this.angle += Math.PI / 2;
         } else {
@@ -176,29 +184,31 @@ class Ant {
             
             this.stuckCount++;
 
-            if (this.stuckCount > 5) {
+            if (this.stuckCount > 3) {
                 // Been stuck too long — forcefully spin to a very different direction
                 this.angle += Math.PI * 0.75 + Math.random() * Math.PI * 0.5;
                 this.stuckCount = 0;
+                this.cooldown = 30; // Walk away for 30 frames before re-targeting
             } else if (roadDirs.length > 0) {
-                // Pick a random clear road direction
-                this.angle = roadDirs[Math.floor(Math.random() * roadDirs.length)];
+                // Pick a random clear road direction that is NOT toward the obstacle
+                let awayDirs = roadDirs.filter(d => {
+                    let diff = Math.abs(d - this.angle);
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    return Math.abs(diff) > Math.PI / 3;
+                });
+                if (awayDirs.length === 0) awayDirs = roadDirs;
+                this.angle = awayDirs[Math.floor(Math.random() * awayDirs.length)];
+                this.cooldown = 15; // Walk away for 15 frames
             } else {
                 this.angle += Math.PI + (Math.random() - 0.5);
+                this.cooldown = 20;
             }
             // Do NOT update position — ant stays outside obstacle
         } else {
             this.x = nx;
             this.y = ny;
-            this.stuckCount = 0; // Reset stuck counter when moving freely
+            if (this.stuckCount > 0) this.stuckCount--; // Gradually reduce stuck counter
         }
-
-        // Stuck detection: if ant hasn't moved far in a while, force a new direction
-        if (Math.hypot(this.x - this.lastX, this.y - this.lastY) < 0.5) {
-            this.stuckCount++;
-        }
-        this.lastX = this.x;
-        this.lastY = this.y;
 
         // Deposit pheromones
         const depositAmount = window.simDeposit || 50;
