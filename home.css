@@ -441,7 +441,7 @@ h1 {
 .references-section {
     padding: 0 2rem 4rem 2rem;
     max-width: 900px;
-    margin: 0 auto;
+    margin: 5rem auto 0 auto;
 }
 
 .ref-list {
