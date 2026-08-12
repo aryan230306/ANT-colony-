@@ -198,11 +198,12 @@ class Ant {
             sim.isObstacle(nx, ny + margin) || 
             sim.isObstacle(nx, ny - margin)) {
             
-            // Just reverse and bounce back to find another route
+            // Fix: Push the ant BACKWARDS before reversing its angle
+            this.x -= Math.cos(this.angle) * 10;
+            this.y -= Math.sin(this.angle) * 10;
+            
+            // Now reverse and bounce to find another route
             this.angle += Math.PI + (Math.random() - 0.5); 
-            // Push the ant backwards so it doesn't immediately recollide
-            this.x -= Math.cos(this.angle) * 5;
-            this.y -= Math.sin(this.angle) * 5;
         } else {
             this.x = nx;
             this.y = ny;
