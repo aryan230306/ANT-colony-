@@ -444,31 +444,56 @@ h1 {
     margin: 0 auto;
 }
 
-.references-list {
+.ref-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    padding: 0 1rem;
+}
+
+.ref-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 2rem 3rem;
-    color: var(--text-muted);
-}
-
-.references-list ol {
-    margin: 0;
-    padding-left: 20px;
-}
-
-.references-list li {
-    margin-bottom: 0.8rem;
-    word-break: break-all;
-}
-
-.references-list a {
-    color: #4da6ff;
+    border-radius: 16px;
+    padding: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     text-decoration: none;
-    transition: color 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    backdrop-filter: blur(10px);
 }
 
-.references-list a:hover {
+.ref-card:hover {
+    background: rgba(255, 42, 133, 0.08);
+    border-color: rgba(255, 42, 133, 0.4);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(255, 42, 133, 0.2);
+}
+
+.ref-num {
+    font-size: 1.8rem;
+    font-weight: 800;
     color: var(--primary-pink);
-    text-decoration: underline;
+    opacity: 0.6;
+    min-width: 45px;
+    font-family: monospace;
+    transition: all 0.3s ease;
+}
+
+.ref-card:hover .ref-num {
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(255, 42, 133, 0.6);
+}
+
+.ref-text {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    word-break: break-all;
+    transition: color 0.3s ease;
+}
+
+.ref-card:hover .ref-text {
+    color: #fff;
 }
