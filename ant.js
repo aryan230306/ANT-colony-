@@ -18,7 +18,6 @@ class Ant {
         this.stuckCount = 0;
         this.lastX = x;
         this.lastY = y;
-        this.cooldown = 0; // Frames to ignore target-seeking after hitting an obstacle
         
         // Unique color variation
         this.bodyHue = 15 + Math.random() * 10;
@@ -68,34 +67,7 @@ class Ant {
         // Get available road directions
         const roadDirs = this.findRoadDirections(sim);
 
-        // If on cooldown from hitting an obstacle, walk AWAY and prefer perpendicular turns
-        if (this.cooldown > 0) {
-            this.cooldown--;
-            if (roadDirs.length > 0) {
-                // Filter out directions that go back toward the blocked angle
-                let safeDirs = roadDirs.filter(d => {
-                    let diff = d - this.blockedAngle;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    return Math.abs(diff) > Math.PI / 3; // Must be >60° away from blocked direction
-                });
-                if (safeDirs.length === 0) safeDirs = roadDirs;
-
-                // Prefer perpendicular directions (turns at intersections) over going straight back
-                let perpDirs = safeDirs.filter(d => {
-                    let diff = d - this.blockedAngle;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    return Math.abs(diff) > Math.PI / 2.5; // Roughly perpendicular
-                });
-
-                if (perpDirs.length > 0 && Math.random() < 0.8) {
-                    this.angle = perpDirs[Math.floor(Math.random() * perpDirs.length)];
-                } else {
-                    this.angle = safeDirs[Math.floor(Math.random() * safeDirs.length)];
-                }
-            }
-        } else if (roadDirs.length === 0) {
+        if (roadDirs.length === 0) {
             // Stuck! Try random angles to escape
             this.angle += Math.PI / 2;
         } else {
@@ -202,19 +174,11 @@ class Ant {
             sim.isObstacle(nx, ny + margin) || 
             sim.isObstacle(nx, ny - margin)) {
             
-            if (this.cooldown <= 0) {
-                // FIRST HIT: reverse immediately and start cooldown
-                this.blockedAngle = this.angle;
-                this.angle += Math.PI; // Complete 180° reversal
-                this.cooldown = 200;
-            } else {
-                // STILL STUCK during cooldown — try perpendicular direction
-                this.angle = this.blockedAngle + Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1);
-            }
-            // Push the ant slightly backwards to escape the margin zone
-            this.x -= Math.cos(this.blockedAngle) * 3;
-            this.y -= Math.sin(this.blockedAngle) * 3;
-            // Do NOT move to nx, ny
+            // Just reverse and bounce back to find another route
+            this.angle += Math.PI + (Math.random() - 0.5); 
+            // Push the ant backwards so it doesn't immediately recollide
+            this.x -= Math.cos(this.angle) * 5;
+            this.y -= Math.sin(this.angle) * 5;
         } else {
             this.x = nx;
             this.y = ny;
