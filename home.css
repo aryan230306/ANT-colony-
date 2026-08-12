@@ -440,60 +440,49 @@ h1 {
 
 .references-section {
     padding: 0 2rem 4rem 2rem;
-    max-width: 1200px;
+    max-width: 900px;
     margin: 0 auto;
 }
 
-.ref-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 1.5rem;
+.ref-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     padding: 0 1rem;
 }
 
 .ref-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
-    padding: 1.2rem;
+    background: #111111;
+    border: 1px solid #222222;
+    border-radius: 8px;
+    padding: 18px 24px;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: space-between;
     text-decoration: none;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
 }
 
 .ref-card:hover {
-    background: rgba(255, 42, 133, 0.08);
-    border-color: rgba(255, 42, 133, 0.4);
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(255, 42, 133, 0.2);
-}
-
-.ref-num {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--primary-pink);
-    opacity: 0.6;
-    min-width: 45px;
-    font-family: monospace;
-    transition: all 0.3s ease;
-}
-
-.ref-card:hover .ref-num {
-    opacity: 1;
-    text-shadow: 0 0 10px rgba(255, 42, 133, 0.6);
+    background: #1a1a1a;
+    border-color: #333333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .ref-text {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    line-height: 1.4;
-    word-break: break-all;
-    transition: color 0.3s ease;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 500;
 }
 
-.ref-card:hover .ref-text {
-    color: #fff;
+.ref-icon {
+    color: #888888;
+    transition: color 0.2s ease;
+    flex-shrink: 0;
+    margin-left: 15px;
+}
+
+.ref-card:hover .ref-icon {
+    color: #ffffff;
 }
