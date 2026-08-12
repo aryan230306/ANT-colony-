@@ -512,7 +512,8 @@ class Simulation {
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 11px Inter';
             ctx.textAlign = 'center';
-            ctx.fillText('🍬 Laddoo', f.x, f.y - f.radius - 5);
+            const remaining = 10 - (f.pickups || 0);
+            ctx.fillText(`🍬 Laddoo (${remaining})`, f.x, f.y - f.radius - 5);
         }
 
         // 5. Ants

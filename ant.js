@@ -13,6 +13,11 @@ class Ant {
 
         // Animation
         this.legPhase = Math.random() * Math.PI * 2;
+
+        // Stuck detection
+        this.stuckCount = 0;
+        this.lastX = x;
+        this.lastY = y;
         
         // Unique color variation
         this.bodyHue = 15 + Math.random() * 10;
@@ -101,8 +106,18 @@ class Ant {
                 let targetX = sim.nest.x;
                 let targetY = sim.nest.y;
                 if (!this.hasFood && sim.foodSources.length > 0) {
-                    targetX = sim.foodSources[0].x;
-                    targetY = sim.foodSources[0].y;
+                    // Pick the CLOSEST food source, not always the first one
+                    let closestFood = sim.foodSources[0];
+                    let closestDist = Math.hypot(this.x - closestFood.x, this.y - closestFood.y);
+                    for (let i = 1; i < sim.foodSources.length; i++) {
+                        let d = Math.hypot(this.x - sim.foodSources[i].x, this.y - sim.foodSources[i].y);
+                        if (d < closestDist) {
+                            closestDist = d;
+                            closestFood = sim.foodSources[i];
+                        }
+                    }
+                    targetX = closestFood.x;
+                    targetY = closestFood.y;
                 }
 
                 let angleToTarget = Math.atan2(targetY - this.y, targetX - this.x);
@@ -159,17 +174,31 @@ class Ant {
             sim.isObstacle(nx, ny + margin) || 
             sim.isObstacle(nx, ny - margin)) {
             
-            // Try to find nearest road direction
-            if (roadDirs.length > 0) {
+            this.stuckCount++;
+
+            if (this.stuckCount > 5) {
+                // Been stuck too long — forcefully spin to a very different direction
+                this.angle += Math.PI * 0.75 + Math.random() * Math.PI * 0.5;
+                this.stuckCount = 0;
+            } else if (roadDirs.length > 0) {
+                // Pick a random clear road direction
                 this.angle = roadDirs[Math.floor(Math.random() * roadDirs.length)];
             } else {
-                this.angle += Math.PI + (Math.random() - 0.5); // Reverse if completely stuck
+                this.angle += Math.PI + (Math.random() - 0.5);
             }
-            // We do NOT update this.x and this.y, so the ant stays outside the obstacle.
+            // Do NOT update position — ant stays outside obstacle
         } else {
             this.x = nx;
             this.y = ny;
+            this.stuckCount = 0; // Reset stuck counter when moving freely
         }
+
+        // Stuck detection: if ant hasn't moved far in a while, force a new direction
+        if (Math.hypot(this.x - this.lastX, this.y - this.lastY) < 0.5) {
+            this.stuckCount++;
+        }
+        this.lastX = this.x;
+        this.lastY = this.y;
 
         // Deposit pheromones
         const depositAmount = window.simDeposit || 50;
@@ -177,10 +206,16 @@ class Ant {
 
         // Check food arrival
         if (!this.hasFood) {
-            for (let f of sim.foodSources) {
+            for (let i = sim.foodSources.length - 1; i >= 0; i--) {
+                let f = sim.foodSources[i];
                 if (Math.hypot(this.x - f.x, this.y - f.y) < f.radius) {
                     this.hasFood = true;
                     this.angle += Math.PI;
+                    // Track food pickups — vanish after 10
+                    f.pickups = (f.pickups || 0) + 1;
+                    if (f.pickups >= 10) {
+                        sim.foodSources.splice(i, 1);
+                    }
                     break;
                 }
             }
