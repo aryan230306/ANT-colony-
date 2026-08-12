@@ -19,6 +19,10 @@ class Ant {
         this.lastX = x;
         this.lastY = y;
         
+        // Path Memory (to remember route back home)
+        this.pathMemory = [];
+        this.frameCount = 0;
+        
         // Unique color variation
         this.bodyHue = 15 + Math.random() * 10;
         this.bodyLight = 12 + Math.random() * 8;
@@ -71,6 +75,12 @@ class Ant {
             // Stuck! Try random angles to escape
             this.angle += Math.PI / 2;
         } else {
+            this.frameCount++;
+            if (!this.hasFood && this.frameCount % 20 === 0) {
+                // Remember path while exploring
+                this.pathMemory.push({x: this.x, y: this.y});
+            }
+
             // Sense pheromones along available road directions
             let bestAngle = this.angle;
             let bestWeight = -1;
@@ -81,7 +91,9 @@ class Ant {
             const wRight = this.sense(sim, readGrid, this.angle + this.sensorAngle);
             let totalWeight = wCenter + wLeft + wRight;
 
-            if (totalWeight > 0.001) {
+            // Only follow pheromones when searching for food. 
+            // When returning, rely strictly on memory to avoid wandering.
+            if (!this.hasFood && totalWeight > 0.001) {
                 // Follow pheromone trail
                 let pL = wLeft / totalWeight;
                 let pC = wCenter / totalWeight;
@@ -102,7 +114,7 @@ class Ant {
                 }
                 // else keep straight
             } else {
-                // No pheromone: navigate towards target
+                // No pheromone (or returning home): navigate towards target
                 let targetX = sim.nest.x;
                 let targetY = sim.nest.y;
                 if (!this.hasFood && sim.foodSources.length > 0) {
@@ -118,6 +130,18 @@ class Ant {
                     }
                     targetX = closestFood.x;
                     targetY = closestFood.y;
+                } else if (this.hasFood) {
+                    // Retrace steps using path memory
+                    while (this.pathMemory.length > 0) {
+                        let lastPoint = this.pathMemory[this.pathMemory.length - 1];
+                        if (Math.hypot(this.x - lastPoint.x, this.y - lastPoint.y) < 20) {
+                            this.pathMemory.pop(); // Reached this waypoint, target the next one
+                        } else {
+                            targetX = lastPoint.x;
+                            targetY = lastPoint.y;
+                            break;
+                        }
+                    }
                 }
 
                 let angleToTarget = Math.atan2(targetY - this.y, targetX - this.x);
@@ -209,6 +233,7 @@ class Ant {
                 this.hasFood = false;
                 this.isResting = true;
                 this.angle += Math.PI;
+                this.pathMemory = []; // Clear memory for the next trip
             }
         }
 
