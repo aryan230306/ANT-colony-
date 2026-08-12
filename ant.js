@@ -202,13 +202,19 @@ class Ant {
             sim.isObstacle(nx, ny + margin) || 
             sim.isObstacle(nx, ny - margin)) {
             
-            // REVERSE immediately — go back the way you came
-            this.blockedAngle = this.angle; // Remember which direction was blocked
-            this.angle += Math.PI; // Complete 180° reversal
-            this.cooldown = 200; // Ignore food/pheromone targeting for 200 frames
-                                  // At speed 1.5, that's 300px — enough to walk back
-                                  // past an intersection and take a different road
-            // Do NOT update position
+            if (this.cooldown <= 0) {
+                // FIRST HIT: reverse immediately and start cooldown
+                this.blockedAngle = this.angle;
+                this.angle += Math.PI; // Complete 180° reversal
+                this.cooldown = 200;
+            } else {
+                // STILL STUCK during cooldown — try perpendicular direction
+                this.angle = this.blockedAngle + Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1);
+            }
+            // Push the ant slightly backwards to escape the margin zone
+            this.x -= Math.cos(this.blockedAngle) * 3;
+            this.y -= Math.sin(this.blockedAngle) * 3;
+            // Do NOT move to nx, ny
         } else {
             this.x = nx;
             this.y = ny;
