@@ -466,46 +466,25 @@ class Simulation {
         // 1. Cached city map
         ctx.drawImage(this.cityCanvas, 0, 0);
 
-        // 2. Pheromone trails — pink = "to food", green = "way back home"
+        // 2. Pheromone trails
         const data = this.trailPixels;
         for (let i = 0; i < this.numCells; i++) {
             const pi = i * 4;
             if (this.obstacles[i] === 1) {
                 data[pi] = 0; data[pi+1] = 0; data[pi+2] = 0; data[pi+3] = 0;
             } else {
-                let foodIntensity = this.foodGrid[i];
-                let homeIntensity = this.homeGrid[i];
-
-                if (foodIntensity > 0.05 || homeIntensity > 0.05) {
-                    let r, g, b, alpha;
-
-                    if (homeIntensity > foodIntensity) {
-                        // GREEN trail — "way back home" (deposited by ants carrying food)
-                        let intensity = homeIntensity;
-                        alpha = Math.min(230, intensity * 22);
-                        if (intensity > 8) {
-                            r = 50; g = 220 + Math.floor(Math.min(35, intensity * 0.3)); b = 80;
-                        } else {
-                            r = 80; g = 200; b = 100;
-                            alpha = Math.max(80, alpha);
-                        }
-                        // Sparkle on strong green trails
-                        if (intensity > 25 && this.frame % 3 === 0 && ((i*7+this.frame) % 47) < 2) {
-                            r = 200; g = 255; b = 220; alpha = 255;
-                        }
+                let intensity = Math.max(this.homeGrid[i], this.foodGrid[i]);
+                if (intensity > 0.05) {
+                    let alpha = Math.min(230, intensity * 22);
+                    let r, g, b;
+                    if (intensity > 8) {
+                        r = 255; g = 70 + Math.floor(Math.min(60, intensity*0.4)); b = 170;
                     } else {
-                        // PINK trail — "to food" (deposited by ants searching for food)
-                        let intensity = foodIntensity;
-                        alpha = Math.min(230, intensity * 22);
-                        if (intensity > 8) {
-                            r = 255; g = 70 + Math.floor(Math.min(60, intensity*0.4)); b = 170;
-                        } else {
-                            r = 240; g = 120; b = 170;
-                            alpha = Math.max(80, alpha);
-                        }
-                        if (intensity > 25 && this.frame % 3 === 0 && ((i*7+this.frame) % 47) < 2) {
-                            r = 255; g = 230; b = 245; alpha = 255;
-                        }
+                        r = 240; g = 120; b = 170;
+                        alpha = Math.max(80, alpha);
+                    }
+                    if (intensity > 25 && this.frame % 3 === 0 && ((i*7+this.frame) % 47) < 2) {
+                        r = 255; g = 230; b = 245; alpha = 255;
                     }
                     data[pi] = r; data[pi+1] = g; data[pi+2] = b; data[pi+3] = Math.floor(alpha);
                 } else {
