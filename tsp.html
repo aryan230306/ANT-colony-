@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travelling Salesman ACO</title>
+    <meta name="description" content="Travelling Salesman Problem using Ant Colony Optimization.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script>
+        document.write('<link rel="stylesheet" href="index.css?v=' + Date.now() + '">');
+    </script>
+    <style>
+        /* Additional styling for TSP specific elements */
+        .city-label {
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        .stats-panel {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-family: monospace;
+        }
+        #simCanvas {
+            background: url('tsp_modern_bg.jpg') center/cover no-repeat;
+            opacity: 0.8; /* Subtle network nodes background */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="simCanvas"></canvas>
+    
+    <a href="index.html" class="floating-btn" style="top: 20px; left: 20px; text-decoration: none; width: auto; background: rgba(255, 42, 133, 0.2); border-color: rgba(255, 42, 133, 0.5);">← Back to Home</a>
+    <button id="btnShowUI" class="floating-btn hidden">Show Controls (H)</button>
+
+    <div id="uiPanel" class="glass-panel">
+        <button id="btnHideUI" class="close-btn" title="Hide Controls (H)">✖</button>
+        <h1>Travelling Salesman</h1>
+        <p class="subtitle">Genetic Algorithm TSP Solver</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Num Cities to Generate:</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="numCities" min="3" max="100" value="15" style="width: 60px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 4px; padding: 4px;">
+                    <button id="btnGenerate" class="btn primary" style="flex: 1;">Randomize</button>
+                </div>
+                <p style="font-size: 0.8em; color: #a097a8; margin-top: 5px;">Or click on canvas to add manually.</p>
+            </div>
+
+            <div class="control-group">
+                <label for="popSize">Population Size: <span id="popSizeVal">100</span></label>
+                <input type="range" id="popSize" min="10" max="500" value="100" step="10">
+            </div>
+
+            <div class="control-group">
+                <label for="mutationRate">Mutation Rate: <span id="mutationRateVal">5%</span></label>
+                <input type="range" id="mutationRate" min="0.01" max="0.5" value="0.05" step="0.01">
+            </div>
+
+            <div class="stats-panel">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>Best Distance:</span>
+                    <span id="bestDistance" style="color: #ff2a85; font-weight: bold;">∞</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Iterations:</span>
+                    <span id="iterationCount">0</span>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="btnStart" class="btn primary">Start Search</button>
+                <button id="btnPause" class="btn secondary">Pause</button>
+                <button id="btnClear" class="btn secondary" style="background: #e74c3c; color: white; border-color: #c0392b;">Clear All</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cb = Math.random().toString(36).substring(7);
+        document.write('<script src="tsp.js?v=' + cb + '"><\/script>');
+    </script>
+</body>
+</html>
